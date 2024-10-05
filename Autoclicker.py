@@ -1,150 +1,199 @@
 import tkinter as tk
-from pynput.keyboard import Controller as KeyboardController
-from pynput.mouse import Controller as MouseController, Button
-from pynput.keyboard import Key
+from tkinter import ttk
+import pyautogui
 import threading
-import keyboard
 import time
-import pygetwindow as gw  # Library to manage windows
+import win32gui  # For handling window focusing
+import keyboard  # Global keyboard listener (requires `pip install keyboard`)
 
-class AutoClicker:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Auto Clicker")
+# Global variables to track buttons, click points, and minimized state
+drag_buttons = []
+click_positions = []
+drag_windows = []
 
-        self.clicking = False
-        self.click_position = (0, 0)
-        self.keyboard = KeyboardController()
-        self.mouse = MouseController()
+# To track the auto-clicker state
+auto_clicker_running = threading.Event()
 
-        # Mode Selector
-        self.mode_var = tk.StringVar(value="Right Click")
-        self.mode_menu = tk.OptionMenu(root, self.mode_var, "Right Click", "Enter Mode")
-        self.mode_menu.pack(pady=5)
+# Function to list currently open windows
+def get_open_windows():
+    windows = []
+    def callback(hwnd, extra):
+        if win32gui.IsWindowVisible(hwnd):
+            windows.append(win32gui.GetWindowText(hwnd))
+    win32gui.EnumWindows(callback, None)
+    return [win for win in windows if win.strip()]
 
-        # Program Selector Dropdown
-        self.program_var = tk.StringVar(value="Select Program")
-        self.program_menu = tk.OptionMenu(root, self.program_var, *self.get_open_programs())
-        self.program_menu.pack(pady=5)
+# Function to focus on a specific window
+def focus_on_window(window_name):
+    hwnd = win32gui.FindWindow(None, window_name)
+    if hwnd:
+        win32gui.SetForegroundWindow(hwnd)
 
-        # Sequence Selector Dropdown
-        self.sequence_var = tk.StringVar(value="Select Sequence")
-        self.sequence_menu = tk.OptionMenu(root, self.sequence_var, "Standard Click", "Custom Enter Sequence")
-        self.sequence_menu.pack(pady=5)
+# Function to handle clicks based on the selected mode
+def perform_click(mode, x, y, sequence=None):
+    if sequence:
+        for action in sequence:
+            if action['type'] == 'click':
+                pyautogui.click(x, y) if mode == 'Left Click' else pyautogui.rightClick(x, y)
+            elif action['type'] == 'press':
+                pyautogui.press(action['key'])
+            elif action['type'] == 'hold':
+                pyautogui.keyDown(action['key'])
+                time.sleep(action['duration'])
+                pyautogui.keyUp(action['key'])
+            time.sleep(action['wait'])
+    else:
+        if mode == "Right Click":
+            pyautogui.rightClick(x, y)
+        elif mode == "Left Click":
+            pyautogui.leftClick(x, y)
+        elif mode == "Enter Mode":
+            pyautogui.press('enter')
 
-        # Main Buttons for the GUI
-        self.click_point_button = tk.Button(root, text="Click Point", command=self.get_click_position)
-        self.click_point_button.pack(pady=10)
+# Function to start the auto-clicker with sequence support
+def start_auto_clicker():
+    mode = mode_var.get()
+    interval = 0.2  # Fixed interval between clicks for now
 
-        self.start_button = tk.Button(root, text="Start", command=self.start_clicking)
-        self.start_button.pack(pady=10)
+    # Retrieve the selected sequence (if any)
+    selected_sequence = sequences_var.get()
+    sequence = predefined_sequences.get(selected_sequence, None)
 
-        self.stop_button = tk.Button(root, text="Stop", command=self.stop_clicking)
-        self.stop_button.pack(pady=10)
+    # Focus on the selected program window
+    selected_program = window_var.get()
+    if selected_program:
+        focus_on_window(selected_program)
 
-        # Create a separate window for the draggable button
-        self.create_draggable_window()
+    # Hide all drag buttons when the auto-clicker starts
+    for button_window in drag_windows:
+        button_window.withdraw()
 
-        # Set up key bindings
-        keyboard.add_hotkey('esc', self.stop_clicking)
-        self.root.bind('<Return>', lambda event: self.start_clicking())
+    # Minimize the main window
+    root.iconify()
 
-    def get_open_programs(self):
-        """Returns a list of currently open window titles."""
-        windows = gw.getWindowsWithTitle('')
-        program_names = [win.title for win in windows if win.title.strip()]
-        return program_names if program_names else ["No programs found"]
+    # Define the click loop
+    def click_loop():
+        while auto_clicker_running.is_set():
+            for index, (x, y) in enumerate(click_positions):
+                perform_click(mode, x, y, sequence)
+                time.sleep(interval)
 
-    def focus_selected_program(self):
-        """Brings the selected program window to the foreground."""
-        program_name = self.program_var.get()
-        if program_name and program_name != "Select Program":
-            windows = gw.getWindowsWithTitle(program_name)
-            if windows:
-                windows[0].activate()  # Bring the selected program window to the front
-                print(f"Focused on {program_name}.")
+    # Start the auto-clicker thread
+    auto_clicker_running.set()
+    threading.Thread(target=click_loop).start()
 
-    def create_draggable_window(self):
-        self.draggable_window = tk.Toplevel(self.root)
-        self.draggable_window.overrideredirect(True)
-        self.draggable_window.geometry("100x40+500+300")
-        self.draggable_window.configure(bg="lightgrey")
-        self.draggable_window.lift()
-        self.draggable_window.attributes('-topmost', True)
-        self.draggable_button = tk.Button(self.draggable_window, text="Drag Me", bg="grey", relief='raised')
-        self.draggable_button.pack(fill=tk.BOTH, expand=True)
-        self.draggable_button.bind('<B1-Motion>', self.drag)
+# Function to stop the auto-clicker
+def stop_auto_clicker():
+    auto_clicker_running.clear()
 
-    def get_click_position(self):
-        self.click_position = self.draggable_window.winfo_x(), self.draggable_window.winfo_y()
-        print(f"Click position set to: {self.click_position}")
+    # Restore the drag buttons
+    for button_window in drag_windows:
+        button_window.deiconify()
 
-    def drag(self, event):
-        x = event.x_root
-        y = event.y_root
-        self.draggable_window.geometry(f"+{x}+{y}")
-        self.click_position = (x, y)
-        print(f"Button dragged to: {self.click_position}")
+    # Restore the main window
+    root.deiconify()
 
-    def start_clicking(self):
-        if not self.clicking:
-            self.clicking = True
-            self.focus_selected_program()
-            print(f"Starting clicks at: {self.click_position} in {self.mode_var.get()} mode with {self.sequence_var.get()} sequence.")
+# Function to create a frameless draggable window for each button
+def create_floating_button(button_name):
+    button_window = tk.Toplevel()  # Create a new top-level window for each button
+    button_window.overrideredirect(True)  # Remove the window's top bar
+    button_window.geometry("100x50+50+50")  # Set initial size and position
+    button_window.wm_attributes("-topmost", True)  # Keep the window on top
 
-            # Minimize both the main window and the draggable button window
-            self.root.withdraw()
-            self.draggable_window.withdraw()
-            self.click_thread = threading.Thread(target=self.click_loop)
-            self.click_thread.start()
+    # Create a draggable button inside the frameless window
+    drag_button = tk.Button(button_window, text=button_name, bg="lightblue")
+    drag_button.pack(expand=True, fill='both')
 
-    def stop_clicking(self):
-        self.clicking = False
-        print("Clicking stopped.")
-        self.root.deiconify()
-        self.draggable_window.deiconify()
+    # Track position updates in `click_positions`
+    drag_windows.append(button_window)
+    click_positions.append((button_window.winfo_x(), button_window.winfo_y()))
 
-    def click_loop(self):
-        sequence = self.sequence_var.get()
-        while self.clicking:
-            if sequence == "Standard Click":
-                self.execute_standard_click()
-            elif sequence == "Custom Enter Sequence":
-                self.execute_custom_enter_sequence()
-            time.sleep(0.1)  # Small delay to prevent high CPU usage
+    # Function to handle window dragging
+    def start_drag(event):
+        button_window._drag_start_x = event.x
+        button_window._drag_start_y = event.y
 
-    def execute_standard_click(self):
-        if self.mode_var.get() == "Right Click":
-            self.mouse.position = self.click_position
-            self.mouse.click(Button.right, 1)
-            time.sleep(0.2)  # Standard 200ms interval
-        elif self.mode_var.get() == "Enter Mode":
-            self.keyboard.press(Key.enter)
-            self.keyboard.release(Key.enter)
-            time.sleep(0.2)
+    def do_drag(event):
+        # Calculate the new position
+        x = event.x_root - button_window._drag_start_x
+        y = event.y_root - button_window._drag_start_y
+        button_window.geometry(f"+{x}+{y}")
 
-    def execute_custom_enter_sequence(self):
-        # Step 1: Hit Enter
-        self.keyboard.press(Key.enter)
-        self.keyboard.release(Key.enter)
-        time.sleep(0.15)  # Wait 100ms
+        # Update click position for this button
+        index = drag_windows.index(button_window)
+        click_positions[index] = (x, y)
 
-        # Step 2: Hold Enter for 3 seconds
-        self.keyboard.press(Key.enter)
-        time.sleep(3.0)  # Hold for 3 seconds
-        self.keyboard.release(Key.enter)
-        time.sleep(1.2)  # Wait 200ms
+    # Function to delete button on right-click
+    def delete_button(event):
+        index = drag_windows.index(button_window)
+        drag_windows.pop(index)
+        click_positions.pop(index)
+        button_window.destroy()
 
-        # Step 3: Hit Enter again
-        self.keyboard.press(Key.enter)
-        self.keyboard.release(Key.enter)
-        time.sleep(0.15)
+    # Bind mouse events for dragging and deletion
+    drag_button.bind("<ButtonPress-1>", start_drag)
+    drag_button.bind("<B1-Motion>", do_drag)
+    drag_button.bind("<Button-3>", delete_button)  # Right-click to delete
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = AutoClicker(root)
-    root.geometry("350x300+100+100")  # Resize to fit additional elements
-    root.mainloop()
+# Function to add a new floating "Drag Me" button
+def add_click_button():
+    button_name = f"Drag Me#{len(drag_windows) + 1}"
+    create_floating_button(button_name)
+
+# Main Application Window
+root = tk.Tk()
+root.title("Auto Clicker")
+root.geometry("500x400")
+
+# Dropdown menu to select click mode
+mode_var = tk.StringVar(value="Right Click")
+mode_label = tk.Label(root, text="Select Mode:")
+mode_label.pack()
+mode_dropdown = ttk.Combobox(root, textvariable=mode_var, values=["Right Click", "Left Click", "Enter Mode"])
+mode_dropdown.pack()
+
+# Dropdown menu for selecting active program
+window_var = tk.StringVar(value="")
+window_label = tk.Label(root, text="Select Window to Focus On:")
+window_label.pack()
+window_dropdown = ttk.Combobox(root, textvariable=window_var, values=get_open_windows())
+window_dropdown.pack()
+
+# Dropdown menu for selecting a sequence
+sequences_var = tk.StringVar(value="Default Sequence")
+sequence_label = tk.Label(root, text="Select Sequence:")
+sequence_label.pack()
+sequence_dropdown = ttk.Combobox(root, textvariable=sequences_var, values=["Default Sequence", "Custom Enter Sequence"])
+sequence_dropdown.pack()
+
+# Add Click button to generate new "Drag Me" buttons
+add_click_button = tk.Button(root, text="Add Click", command=add_click_button)
+add_click_button.pack(pady=10)
+
+# Start and Stop buttons
+start_button = tk.Button(root, text="Start", command=start_auto_clicker)
+start_button.pack(pady=5)
+
+stop_button = tk.Button(root, text="Stop", command=stop_auto_clicker)
+stop_button.pack(pady=5)
+
+# Predefined Sequences
+predefined_sequences = {
+    "Default Sequence": None,
+    "Custom Enter Sequence": [
+        {"type": "press", "key": "enter", "wait": 0.1},
+        {"type": "hold", "key": "enter", "duration": 3.0, "wait": 0.2},
+        {"type": "press", "key": "enter", "wait": 0.1}
+    ]
+}
+
+# Global keyboard listeners for start and stop
+keyboard.add_hotkey("enter", start_auto_clicker)  # Enter to start
+keyboard.add_hotkey("esc", stop_auto_clicker)     # Esc to stop
+
+# Run the main loop
+root.mainloop()
+
 
 
 
