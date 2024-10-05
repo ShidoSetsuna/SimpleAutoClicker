@@ -19,7 +19,7 @@ Draggable Click Point Button: Set the click position anywhere on the screen by d
 - **Start and Stop Buttons:**
 Control the automation through the GUI or the Enter key to start, and the Esc key to immediately stop. (although the Esc to stop seems to be rather broken..)
 - **Add Click Button**
-INSANE NEW FEATURE, Yes, believe it or not, you can now add MULITPLE for action buttons CRAZY RIGHT?!?! BUT HOLD ON THERES MORE!
+INSANE NEW FEATURE, Yes, believe it or not, you can now add MULITPLE action buttons CRAZY RIGHT?!?! BUT HOLD ON, THERES MORE!
 YES, THATS RIGHT. YOU CAN DELETE AN ACTION BUTTON BY RIGHT CLICKING ON IT!
 
 Jokes aside, I hope at least one person finds this helpful. Oh and a quick note, of course even though I call these buttons click buttons or whatever each button can be used as a hold of course. You just still need to manually set it because I haven't made a system for it YET.
