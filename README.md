@@ -4,11 +4,11 @@ A very basic auto clicker for windows 11
 ## Prerequisites:
 Python 3.7+
 Install the required libraries:
-`pip install tkinter pynput`
+`pip install tkinter pynput win32gui`
 
 ### Features:
 - **Standard Click Mode:**
-  Automates regular right-clicks at specified intervals.
+  Automates regular right/left-clicks at specified intervals.
 - **Enter Key Mode:**
   Automates clicking using the Enter key, along with a custom sequence (e.g., holding the Enter key for a specified duration).
 - **Custom Sequences:**
@@ -18,6 +18,11 @@ Allows you to select and focus on any open program for the auto-clicker to opera
 Draggable Click Point Button: Set the click position anywhere on the screen by dragging and placing the button.
 - **Start and Stop Buttons:**
 Control the automation through the GUI or the Enter key to start, and the Esc key to immediately stop. (although the Esc to stop seems to be rather broken..)
+- **Add Click Button**
+INSANE NEW FEATURE, Yes, believe it or not, you can now add MULITPLE for action buttons CRAZY RIGHT?!?! BUT HOLD ON THERES MORE!
+YES, THATS RIGHT. YOU CAN DELETE AN ACTION BUTTON BY RIGHT CLICKING ON IT!
+
+Jokes aside, I hope at least one person finds this helpful. Oh and a quick note, of course even though I call these buttons click buttons or whatever each button can be used as a hold of course. You just still need to manually set it because I haven't made a system for it YET.
 
 I haven't created a system for creating custom sequences,
 so if thats what you need you'll need to code it into the program.
