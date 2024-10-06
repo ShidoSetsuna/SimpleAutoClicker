@@ -1,0 +1,77 @@
+[
+    {
+        "name": "Sequence#1",
+        "buttons": [
+            {
+                "name": "Drag Me#1",
+                "data": {
+                    "click_type": "Click",
+                    "hold_duration": 1000,
+                    "key_assignment": "Right Click",
+                    "mouse_action": "None"
+                },
+                "position": [
+                    1103,
+                    264
+                ]
+            },
+            {
+                "name": "Drag Me#2",
+                "data": {
+                    "click_type": "Click",
+                    "hold_duration": 1000,
+                    "key_assignment": "Right Click",
+                    "mouse_action": "None"
+                },
+                "position": [
+                    1351,
+                    408
+                ]
+            }
+        ]
+    },
+    {
+        "name": "Sequence#2",
+        "buttons": [
+            {
+                "name": "Drag Me#1",
+                "data": {
+                    "click_type": "Click",
+                    "hold_duration": 1000,
+                    "key_assignment": "Right Click",
+                    "mouse_action": "None"
+                },
+                "position": [
+                    1087,
+                    170
+                ]
+            },
+            {
+                "name": "Drag Me#2",
+                "data": {
+                    "click_type": "Click",
+                    "hold_duration": 1000,
+                    "key_assignment": "Right Click",
+                    "mouse_action": "None"
+                },
+                "position": [
+                    1351,
+                    408
+                ]
+            },
+            {
+                "name": "Drag Me#3",
+                "data": {
+                    "click_type": "Click",
+                    "hold_duration": 1000,
+                    "key_assignment": "Right Click",
+                    "mouse_action": "None"
+                },
+                "position": [
+                    1324,
+                    90
+                ]
+            }
+        ]
+    }
+]
